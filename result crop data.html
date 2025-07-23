@@ -11,7 +11,6 @@
     .leaflet-popup-content { font-size: 14px; }
   </style>
   <link rel="stylesheet" href="style1.css" />
-  
 </head>
 <body>
 
@@ -29,25 +28,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// Function to get current user's identifier (you can modify this based on your authentication system)
-function getCurrentUserId() {
-  // Option 1: Get from URL parameter (if passed from survey form)
-  const urlParams = new URLSearchParams(window.location.search);
-  const userId = urlParams.get('userId');
-  if (userId) return userId;
-  
-  // Option 2: Get from localStorage (if stored during survey)
-  const storedUserId = localStorage.getItem('currentUserId');
-  if (storedUserId) return storedUserId;
-  
-  // Option 3: Get from sessionStorage
-  const sessionUserId = sessionStorage.getItem('currentUserId');
-  if (sessionUserId) return sessionUserId;
-  
-  // Fallback: return null to show all points
-  return null;
-}
-
 const surveyURL = "https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_view/FeatureServer/0/query?where=1=1&outFields=*&f=geojson";
 
 fetch(surveyURL)
@@ -58,39 +38,13 @@ fetch(surveyURL)
       return;
     }
 
-    const props = data.features[0].properties;
-
-    // Log all keys and values of the first feature's properties:
-    console.log("Feature properties:");
-    Object.entries(props).forEach(([key, value]) => {
-      console.log(`${key} : ${value}`);
+    // Find feature with highest ObjectID (latest submission)
+    let latestFeature = data.features.reduce((latest, current) => {
+      return current.properties.ObjectID > latest.properties.ObjectID ? current : latest;
     });
-    
-    const keys = Object.keys(data.features[0].properties);
-    console.log("All keys in properties:", keys);
 
-    // Get current user ID
-    const currentUserId = getCurrentUserId();
-    
-    // Filter data to show only current user's points
-    let filteredData = data;
-    if (currentUserId) {
-      filteredData = {
-        ...data,
-        features: data.features.filter(feature => {
-          // Adjust this condition based on how user ID is stored in your survey data
-          // Common field names might be: userId, user_id, submitter_id, etc.
-          return feature.properties.userId === currentUserId || 
-                 feature.properties.user_id === currentUserId ||
-                 feature.properties.submitter_id === currentUserId ||
-                 feature.properties.UserID === currentUserId;
-        })
-      };
-      
-      console.log(`Filtered ${filteredData.features.length} points for user: ${currentUserId}`);
-    }
-
-    const geoLayer = L.geoJSON(filteredData, {
+    // Create marker for latest point
+    const latestLayer = L.geoJSON(latestFeature, {
       pointToLayer: (feature, latlng) => {
         return L.circleMarker(latlng, {
           radius: 6,
@@ -99,13 +53,12 @@ fetch(surveyURL)
           weight: 1,
           opacity: 1,
           fillOpacity: 0.8,
-          interactive: true  // make sure marker is clickable
+          interactive: true
         });
       },
       onEachFeature: (feature, layer) => {
         const props = feature.properties;
 
-        // Use the exact keys from your data
         const cropCategoryKey = "Cultivated Crop Catergory";
         const cropTypeKey = "Names of the Crop Types";
         const landExtendKey = "Land Extend (acres)";
@@ -118,61 +71,37 @@ fetch(surveyURL)
 
         layer.bindPopup(popupContent);
 
-        // Open popup explicitly on click
         layer.on('click', () => {
           layer.openPopup();
         });
       }
     }).addTo(map);
-    
-    map.fitBounds(latestLayer.getBounds());
 
+    // Create buffer around latest point (0.1 km = 100 meters)
+    const buffer = turf.buffer(latestFeature, 0.1, { units: 'kilometers' });
 
-    if (filteredData.features.length > 0) {
-      map.fitBounds(geoLayer.getBounds());
-      document.getElementById("info-box").innerHTML = currentUserId ? 
-        `Showing your survey points (${filteredData.features.length} found)` : 
-        "Survey points loaded successfully.";
-    } else {
-      document.getElementById("info-box").innerHTML = currentUserId ? 
-        "No survey points found for your account." : 
-        "No survey data found.";
-    }
+    // Add buffer to map
+    L.geoJSON(buffer, {
+      style: {
+        color: 'blue',
+        weight: 2,
+        fillColor: 'lightblue',
+        fillOpacity: 0.4
+      }
+    }).addTo(map);
+
+    // Fit map to buffer area
+    map.fitBounds(L.geoJSON(buffer).getBounds());
+
+    document.getElementById("info-box").innerHTML = "Latest survey point and buffer displayed.";
   })
   .catch(err => {
     console.error("Error loading survey data:", err);
     document.getElementById("info-box").innerHTML = "Error loading survey data.";
   });
-
-  // Step 1: Find the most recently added point (adjust if your newest is elsewhere)
-const latestFeature = filteredData.features[filteredData.features.length - 1];
-
-if (latestFeature) {
-  // Step 2: Create a 1km buffer around the latest point using Turf.js
-  const buffered = turf.buffer(latestFeature, 1, { units: 'kilometers' });
-
-  // Step 3: Add buffer to the map as a GeoJSON layer with circular styling
-  const bufferLayer = L.geoJSON(buffered, {
-    style: {
-      color: 'blue',
-      fillColor: '#3f8efc',
-      fillOpacity: 0.2,
-      weight: 2,
-      dashArray: '8 4' // Circular/dashed pattern
-    }
-  }).addTo(map);
-
-  // Step 4: Fit map to the buffer layer
-  map.fitBounds(bufferLayer.getBounds());
-
-  document.getElementById("info-box").innerHTML = "Showing 1km buffer around your most recent point.";
-} else {
-  document.getElementById("info-box").innerHTML = "No points found for your account.";
-}
 </script>
 
 <script src="result1.js"></script>
 
 </body>
-
 </html>
