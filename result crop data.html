@@ -29,67 +29,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-
-// Fetch Survey123 data (replace "0" with correct layer index if needed)
-const surveyURL = "https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_view/FeatureServer/0/query?where=1=1&outFields=*&f=geojson";
-
-fetch(surveyURL)
-  .then(res => res.json())
-  .then(data => {
-    if (!data.features || data.features.length === 0) {
-      document.getElementById("info-box").innerHTML = "No survey data found.";
-      return;
-    }
-
-const props = data.features[0].properties;
-
-    // Log all keys and values of the first feature's properties:
-    console.log("Feature properties:");
-    Object.entries(props).forEach(([key, value]) => {
-      console.log(`${key} : ${value}`);
-    });
-    
-    const keys = Object.keys(data.features[0].properties);
-      console.log("All keys in properties:", keys);
-
-      const geoLayer = L.geoJSON(data, {
-        pointToLayer: (feature, latlng) => {
-          return L.circleMarker(latlng, {
-            radius: 6,
-            fillColor: "green",
-            color: "black",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
-          });
-        },
-        onEachFeature: (feature, layer) => {
-          const props = feature.properties;
-
-          // Replace these with your actual keys from console output!
-          const cropCategoryKey = "cultivated_crop_catergory";
-          const cropTypeKey = "names_of_the_crop_types";
-          const landExtendKey = "land_extend";
-
-          const popupContent = `
-            <strong>Crop Category:</strong> ${props[cropCategoryKey] || 'N/A'}<br/>
-            <strong>Crop Type:</strong> ${props[cropTypeKey] || 'N/A'}<br/>
-            <strong>Land Extend:</strong> ${props[landExtendKey] || 'N/A'} acres
-          `;
-
-          layer.bindPopup(popupContent);
-        }
-      }).addTo(map);
-
-      map.fitBounds(geoLayer.getBounds());
-
-      document.getElementById("info-box").innerHTML = "Survey points loaded successfully.";
-    })
-    .catch(err => {
-      console.error("Error loading survey data:", err);
-      document.getElementById("info-box").innerHTML = "Error loading survey data.";
-    });
-
 </script>
 
 <script src="result1.js"></script>
