@@ -86,7 +86,7 @@ fetch(surveyURL)
       }
     }).addTo(map);
 
-    map.fitBounds(latestLayer.getBounds());
+    map.fitBounds(geoLayer.getBounds());
 
     document.getElementById("info-box").innerHTML = "Survey points loaded successfully.";
   })
