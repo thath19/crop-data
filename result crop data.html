@@ -11,7 +11,6 @@
     .leaflet-popup-content { font-size: 14px; }
   </style>
   <link rel="stylesheet" href="style1.css" />
-  
 </head>
 <body>
 
@@ -29,27 +28,19 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
+// 👇 Set the target OBJECTID to filter
+const targetObjectID = 'Object ID'; // <-- Replace this with the actual OBJECTID
 
-const surveyURL = "https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_4_view/FeatureServer/0/query?where=1=1&outFields=*&f=geojson";
+// Filter the FeatureServer query by OBJECTID
+const surveyURL = `https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_4_view/FeatureServer/0/query?where=OBJECTID=${targetObjectID}&outFields=*&f=geojson`;
 
 fetch(surveyURL)
   .then(res => res.json())
   .then(data => {
     if (!data.features || data.features.length === 0) {
-      document.getElementById("info-box").innerHTML = "No survey data found.";
+      document.getElementById("info-box").innerHTML = "No survey data found for the specified OBJECTID.";
       return;
     }
-
-    const props = data.features[0].properties;
-
-    // Log all keys and values of the first feature's properties:
-    console.log("Feature properties:");
-    Object.entries(props).forEach(([key, value]) => {
-      console.log(`${key} : ${value}`);
-    });
-    
-    const keys = Object.keys(data.features[0].properties);
-    console.log("All keys in properties:", keys);
 
     const geoLayer = L.geoJSON(data, {
       pointToLayer: (feature, latlng) => {
@@ -59,36 +50,23 @@ fetch(surveyURL)
           color: "black",
           weight: 1,
           opacity: 1,
-          fillOpacity: 0.8,
-          interactive: true  // make sure marker is clickable
+          fillOpacity: 0.8
         });
       },
       onEachFeature: (feature, layer) => {
         const props = feature.properties;
-
-        // Use the exact keys from your data
-        const cropCategoryKey = "Cultivated Crop Catergory";
-        const cropTypeKey = "Names of the Crop Types";
-        const landExtendKey = "Land Extend (acres)";
-
         const popupContent = `
-          <strong>Crop Category:</strong> ${props[cropCategoryKey] || 'N/A'}<br/>
-          <strong>Crop Type:</strong> ${props[cropTypeKey] || 'N/A'}<br/>
-          <strong>Land Extend:</strong> ${props[landExtendKey] || 'N/A'} acres
+          <strong>Crop Category:</strong> ${props["Cultivated Crop Catergory"] || 'N/A'}<br/>
+          <strong>Crop Type:</strong> ${props["Names of the Crop Types"] || 'N/A'}<br/>
+          <strong>Land Extend:</strong> ${props["Land Extend (acres)"] || 'N/A'} acres
         `;
-
         layer.bindPopup(popupContent);
-
-        // Open popup explicitly on click
-        layer.on('click', () => {
-          layer.openPopup();
-        });
+        layer.on('click', () => layer.openPopup());
       }
     }).addTo(map);
 
     map.fitBounds(geoLayer.getBounds());
-
-    document.getElementById("info-box").innerHTML = "Survey points loaded successfully.";
+    document.getElementById("info-box").innerHTML = "Survey point loaded successfully.";
   })
   .catch(err => {
     console.error("Error loading survey data:", err);
@@ -96,9 +74,5 @@ fetch(surveyURL)
   });
 </script>
 
-<script src="result1.js"></script>
-
 </body>
-
 </html>
-
