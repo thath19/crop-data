@@ -143,6 +143,32 @@ fetch(surveyURL)
     console.error("Error loading survey data:", err);
     document.getElementById("info-box").innerHTML = "Error loading survey data.";
   });
+
+  // Step 1: Find the most recently added point (adjust if your newest is elsewhere)
+const latestFeature = filteredData.features[filteredData.features.length - 1];
+
+if (latestFeature) {
+  // Step 2: Create a 1km buffer around the latest point using Turf.js
+  const buffered = turf.buffer(latestFeature, 1, { units: 'kilometers' });
+
+  // Step 3: Add buffer to the map as a GeoJSON layer with circular styling
+  const bufferLayer = L.geoJSON(buffered, {
+    style: {
+      color: 'blue',
+      fillColor: '#3f8efc',
+      fillOpacity: 0.2,
+      weight: 2,
+      dashArray: '8 4' // Circular/dashed pattern
+    }
+  }).addTo(map);
+
+  // Step 4: Fit map to the buffer layer
+  map.fitBounds(bufferLayer.getBounds());
+
+  document.getElementById("info-box").innerHTML = "Showing 1km buffer around your most recent point.";
+} else {
+  document.getElementById("info-box").innerHTML = "No points found for your account.";
+}
 </script>
 
 <script src="result1.js"></script>
