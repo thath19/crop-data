@@ -29,6 +29,24 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
+// Function to get current user's identifier (you can modify this based on your authentication system)
+function getCurrentUserId() {
+  // Option 1: Get from URL parameter (if passed from survey form)
+  const urlParams = new URLSearchParams(window.location.search);
+  const userId = urlParams.get('userId');
+  if (userId) return userId;
+  
+  // Option 2: Get from localStorage (if stored during survey)
+  const storedUserId = localStorage.getItem('currentUserId');
+  if (storedUserId) return storedUserId;
+  
+  // Option 3: Get from sessionStorage
+  const sessionUserId = sessionStorage.getItem('currentUserId');
+  if (sessionUserId) return sessionUserId;
+  
+  // Fallback: return null to show all points
+  return null;
+}
 
 const surveyURL = "https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_view/FeatureServer/0/query?where=1=1&outFields=*&f=geojson";
 
@@ -51,7 +69,28 @@ fetch(surveyURL)
     const keys = Object.keys(data.features[0].properties);
     console.log("All keys in properties:", keys);
 
-    const geoLayer = L.geoJSON(data, {
+    // Get current user ID
+    const currentUserId = getCurrentUserId();
+    
+    // Filter data to show only current user's points
+    let filteredData = data;
+    if (currentUserId) {
+      filteredData = {
+        ...data,
+        features: data.features.filter(feature => {
+          // Adjust this condition based on how user ID is stored in your survey data
+          // Common field names might be: userId, user_id, submitter_id, etc.
+          return feature.properties.userId === currentUserId || 
+                 feature.properties.user_id === currentUserId ||
+                 feature.properties.submitter_id === currentUserId ||
+                 feature.properties.UserID === currentUserId;
+        })
+      };
+      
+      console.log(`Filtered ${filteredData.features.length} points for user: ${currentUserId}`);
+    }
+
+    const geoLayer = L.geoJSON(filteredData, {
       pointToLayer: (feature, latlng) => {
         return L.circleMarker(latlng, {
           radius: 6,
@@ -86,9 +125,16 @@ fetch(surveyURL)
       }
     }).addTo(map);
 
-    map.fitBounds(geoLayer.getBounds());
-
-    document.getElementById("info-box").innerHTML = "Survey points loaded successfully.";
+    if (filteredData.features.length > 0) {
+      map.fitBounds(geoLayer.getBounds());
+      document.getElementById("info-box").innerHTML = currentUserId ? 
+        `Showing your survey points (${filteredData.features.length} found)` : 
+        "Survey points loaded successfully.";
+    } else {
+      document.getElementById("info-box").innerHTML = currentUserId ? 
+        "No survey points found for your account." : 
+        "No survey data found.";
+    }
   })
   .catch(err => {
     console.error("Error loading survey data:", err);
@@ -101,5 +147,3 @@ fetch(surveyURL)
 </body>
 
 </html>
-
-
