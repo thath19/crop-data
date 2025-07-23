@@ -30,7 +30,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 
-const surveyURL = "https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_view/FeatureServer/0/query?where=1=1&outFields=*&f=geojson";
+const surveyURL = "https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_4_view/FeatureServer/0/query?where=1=1&outFields=*&f=geojson";
 
 fetch(surveyURL)
   .then(res => res.json())
@@ -101,5 +101,4 @@ fetch(surveyURL)
 </body>
 
 </html>
-
 
