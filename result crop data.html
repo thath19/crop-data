@@ -22,6 +22,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
 <script>
+
+
 const map = L.map('map').setView([7.85, 80.75], 8);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -29,6 +31,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
+// ===== Get current user ID (dummy value for now) =====
+const currentUserId = "user123"; // replace this with actual dynamic logic, e.g., from login or session
 
 const surveyURL = "https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_view/FeatureServer/0/query?where=1=1&outFields=*&f=geojson";
 
@@ -40,18 +44,18 @@ fetch(surveyURL)
       return;
     }
 
-    const props = data.features[0].properties;
-
-    // Log all keys and values of the first feature's properties:
-    console.log("Feature properties:");
-    Object.entries(props).forEach(([key, value]) => {
-      console.log(`${key} : ${value}`);
+    // Filter features for current user only
+    const filteredFeatures = data.features.filter(f => {
+      return f.properties["ObjectID"] === currentUserId;
     });
-    
-    const keys = Object.keys(data.features[0].properties);
-    console.log("All keys in properties:", keys);
 
-    const geoLayer = L.geoJSON(data, {
+    if (filteredFeatures.length === 0) {
+      document.getElementById("info-box").innerHTML = "No survey data for this user.";
+      return;
+    }
+
+    // Add filtered points to map
+    const userLayer = L.geoJSON(filteredFeatures, {
       pointToLayer: (feature, latlng) => {
         return L.circleMarker(latlng, {
           radius: 6,
@@ -60,13 +64,12 @@ fetch(surveyURL)
           weight: 1,
           opacity: 1,
           fillOpacity: 0.8,
-          interactive: true  // make sure marker is clickable
         });
       },
       onEachFeature: (feature, layer) => {
         const props = feature.properties;
 
-        // Use the exact keys from your data
+        // Replace these with your actual property keys
         const cropCategoryKey = "Cultivated Crop Catergory";
         const cropTypeKey = "Names of the Crop Types";
         const landExtendKey = "Land Extend (acres)";
@@ -79,21 +82,31 @@ fetch(surveyURL)
 
         layer.bindPopup(popupContent);
 
-        // Open popup explicitly on click
-        layer.on('click', () => {
-          layer.openPopup();
-        });
+        // 🔵 Add buffer around the point
+        const buffer = turf.buffer(feature, 1, { units: 'kilometers' }); // 1 km buffer
+        L.geoJSON(buffer, {
+          style: {
+            color: 'blue',
+            fillColor: 'lightblue',
+            fillOpacity: 0.3,
+            weight: 1
+          }
+        }).addTo(map);
       }
     }).addTo(map);
 
-    map.fitBounds(geoLayer.getBounds());
-
-    document.getElementById("info-box").innerHTML = "Survey points loaded successfully.";
+    map.fitBounds(userLayer.getBounds());
+    document.getElementById("info-box").innerHTML = "Your survey points loaded successfully.";
   })
   .catch(err => {
     console.error("Error loading survey data:", err);
     document.getElementById("info-box").innerHTML = "Error loading survey data.";
   });
+
+
+
+
+
 </script>
 
 <script src="result1.js"></script>
@@ -101,5 +114,4 @@ fetch(surveyURL)
 </body>
 
 </html>
-
 
