@@ -124,6 +124,9 @@ fetch(surveyURL)
         });
       }
     }).addTo(map);
+    
+    map.fitBounds(latestLayer.getBounds());
+
 
     if (filteredData.features.length > 0) {
       map.fitBounds(geoLayer.getBounds());
