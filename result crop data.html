@@ -11,6 +11,7 @@
     .leaflet-popup-content { font-size: 14px; }
   </style>
   <link rel="stylesheet" href="style1.css" />
+  
 </head>
 <body>
 
@@ -28,6 +29,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
+
 const surveyURL = "https://services5.arcgis.com/MpnsppwdopkoFFFQ/arcgis/rest/services/Crop_Data_view/FeatureServer/0/query?where=1=1&outFields=*&f=geojson";
 
 fetch(surveyURL)
@@ -38,13 +40,18 @@ fetch(surveyURL)
       return;
     }
 
-    // Find feature with highest ObjectID (latest submission)
-    let latestFeature = data.features.reduce((latest, current) => {
-      return current.properties.ObjectID > latest.properties.ObjectID ? current : latest;
-    });
+    const props = data.features[0].properties;
 
-    // Create marker for latest point
-    const latestLayer = L.geoJSON(latestFeature, {
+    // Log all keys and values of the first feature's properties:
+    console.log("Feature properties:");
+    Object.entries(props).forEach(([key, value]) => {
+      console.log(`${key} : ${value}`);
+    });
+    
+    const keys = Object.keys(data.features[0].properties);
+    console.log("All keys in properties:", keys);
+
+    const geoLayer = L.geoJSON(data, {
       pointToLayer: (feature, latlng) => {
         return L.circleMarker(latlng, {
           radius: 6,
@@ -53,12 +60,13 @@ fetch(surveyURL)
           weight: 1,
           opacity: 1,
           fillOpacity: 0.8,
-          interactive: true
+          interactive: true  // make sure marker is clickable
         });
       },
       onEachFeature: (feature, layer) => {
         const props = feature.properties;
 
+        // Use the exact keys from your data
         const cropCategoryKey = "Cultivated Crop Catergory";
         const cropTypeKey = "Names of the Crop Types";
         const landExtendKey = "Land Extend (acres)";
@@ -71,29 +79,16 @@ fetch(surveyURL)
 
         layer.bindPopup(popupContent);
 
+        // Open popup explicitly on click
         layer.on('click', () => {
           layer.openPopup();
         });
       }
     }).addTo(map);
 
-    // Create buffer around latest point (0.1 km = 100 meters)
-    const buffer = turf.buffer(latestFeature, 0.1, { units: 'kilometers' });
+    map.fitBounds(latestLayer.getBounds());
 
-    // Add buffer to map
-    L.geoJSON(buffer, {
-      style: {
-        color: 'blue',
-        weight: 2,
-        fillColor: 'lightblue',
-        fillOpacity: 0.4
-      }
-    }).addTo(map);
-
-    // Fit map to buffer area
-    map.fitBounds(L.geoJSON(buffer).getBounds());
-
-    document.getElementById("info-box").innerHTML = "Latest survey point and buffer displayed.";
+    document.getElementById("info-box").innerHTML = "Survey points loaded successfully.";
   })
   .catch(err => {
     console.error("Error loading survey data:", err);
@@ -104,4 +99,7 @@ fetch(surveyURL)
 <script src="result1.js"></script>
 
 </body>
+
 </html>
+
+
