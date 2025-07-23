@@ -11,7 +11,7 @@
     .leaflet-popup-content { font-size: 14px; }
   </style>
   <link rel="stylesheet" href="style1.css" />
-  
+
 </head>
 <body>
 
@@ -41,28 +41,55 @@ fetch(surveyURL)
       return;
     }
 
-    const layer = L.geoJSON(data, {
-      pointToLayer: (feature, latlng) => {
-        return L.circleMarker(latlng, {
-          radius: 6,
-          fillColor: "green",
-          color: "black",
-          weight: 1,
-          opacity: 1,
-          fillOpacity: 0.8
-        });
-      },
+const props = data.features[0].properties;
+
+    // Log all keys and values of the first feature's properties:
+    console.log("Feature properties:");
+    Object.entries(props).forEach(([key, value]) => {
+      console.log(`${key} : ${value}`);
+    });
     
-    }).addTo(map);
+    const keys = Object.keys(data.features[0].properties);
+      console.log("All keys in properties:", keys);
 
-    map.fitBounds(layer.getBounds());
+      const geoLayer = L.geoJSON(data, {
+        pointToLayer: (feature, latlng) => {
+          return L.circleMarker(latlng, {
+            radius: 6,
+            fillColor: "green",
+            color: "black",
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+          });
+        },
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties;
 
-    document.getElementById("info-box").innerHTML = "Survey points loaded successfully.";
-  })
-  .catch(err => {
-    console.error("Error loading survey data:", err);
-    document.getElementById("info-box").innerHTML = "Error loading survey data.";
-  });
+          // Replace these with your actual keys from console output!
+          const cropCategoryKey = "cultivated_crop_catergory";
+          const cropTypeKey = "names_of_the_crop_types";
+          const landExtendKey = "land_extend";
+
+          const popupContent = `
+            <strong>Crop Category:</strong> ${props[cropCategoryKey] || 'N/A'}<br/>
+            <strong>Crop Type:</strong> ${props[cropTypeKey] || 'N/A'}<br/>
+            <strong>Land Extend:</strong> ${props[landExtendKey] || 'N/A'} acres
+          `;
+
+          layer.bindPopup(popupContent);
+        }
+      }).addTo(map);
+
+      map.fitBounds(geoLayer.getBounds());
+
+      document.getElementById("info-box").innerHTML = "Survey points loaded successfully.";
+    })
+    .catch(err => {
+      console.error("Error loading survey data:", err);
+      document.getElementById("info-box").innerHTML = "Error loading survey data.";
+    });
+
 </script>
 
 <script src="result1.js"></script>
